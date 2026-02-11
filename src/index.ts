@@ -1,15 +1,6 @@
-const Engine = require('../node_modules/@comunica/actor-init-sparql').newEngine
-
-import { Bus } from '@comunica/core'
-import { MediatorRace } from '@comunica/mediator-race'
-import { ActorInitRdfParse } from '@comunica/actor-init-rdf-parse'
-import { ActorRdfParseN3 } from '@comunica/actor-rdf-parse-n3'
-
-const N3Store = require('n3').Store
-const DataFactory = require('n3').DataFactory
-
-const stringToStream = require('streamify-string')
-const arrayifyStream = require('arrayify-stream')
+import { QueryEngine as SparqlEngine } from '@comunica/query-sparql'
+import { QueryEngine as RdfjsEngine } from '@comunica/query-sparql-rdfjs'
+import { Store as N3Store, DataFactory, Parser as N3Parser } from 'n3'
 
 function format(query: string) {
   let result = 'table'
@@ -41,63 +32,76 @@ function sources(query) {
 global.RDF = {
   parse: {
     rdf: async function (code: string) {
-      let bus = new Bus({ name: 'bus' })
-      let busInit = new Bus({ name: 'bus-init' })
-      let mediator = new MediatorRace({ name: 'mediator', bus: busInit })
+      const parser = new N3Parser()
+      const store = new N3Store()
 
-      let actor = new ActorInitRdfParse({
-        name: 'actor',
-        bus,
-        mediatorRdfParse: mediator,
-        mediaType: 'text/turtle',
-      })
-
-      busInit.subscribe(
-        new ActorRdfParseN3({
-          bus,
-          mediaTypes: {
-            'application/trig': 1,
-            'application/n-quads': 0.7,
-            'text/turtle': 0.6,
-            'application/n-triples': 0.3,
-            'text/n3': 0.2,
-          },
-          name: 'actor-rdf-parse',
-        })
-      )
-      let input = stringToStream(code)
-
-      return actor
-        .run({ argv: ['text/turtle'], env: {}, stdin: input })
-        .then((stream) => arrayifyStream(stream.stdout))
-        .then((data) => {
-          const store = new N3Store()
-
-          data = data.map((b: any) => JSON.parse(b.toString()))
-
-          for (const quad of data) {
-            store.addQuad(quad.subject, quad.predicate, quad.object, quad.graph)
+      return new Promise((resolve, reject) => {
+        parser.parse(code, (error, quad, prefixes) => {
+          if (error) {
+            reject(error)
+          } else if (quad) {
+            store.addQuad(quad)
+          } else {
+            // Parsing complete
+            resolve(store)
           }
-          return store
         })
+      })
     },
   },
 
   query: async function (
     query: string,
     send: (ok: boolean, message: string) => void,
-    store: any[]
+    store: any[],
   ) {
     try {
-      const engine = Engine()
+      // Separate RDF/JS stores from URL sources
+      const rdfJsStores = store.filter((s) => s instanceof N3Store)
+      const urlSources = sources(query)
+
+      let engine: any
+      let querySources: any[]
+
+      if (rdfJsStores.length > 0 && urlSources.length === 0) {
+        // Only RDF/JS stores - use RDF/JS engine
+        engine = new RdfjsEngine()
+        querySources = rdfJsStores
+      } else {
+        // URLs or mixed sources - use regular SPARQL engine
+        engine = new SparqlEngine()
+        querySources = store.concat(urlSources)
+      }
+
       const result = await engine.query(query, {
-        sources: store.concat(sources(query)),
+        sources: querySources,
       })
 
       const { data } = await engine.resultToString(result, format(query))
 
-      result.bindingsStream.on('end', () => {
-        send(true, new TextDecoder().decode(data.read()))
+      // Collect all data from the stream (browser-compatible)
+      const chunks: any[] = []
+      data.on('data', (chunk: any) => {
+        chunks.push(chunk)
+      })
+
+      data.on('end', () => {
+        // Convert chunks to string - handle both Buffer and Uint8Array
+        let resultText = ''
+        for (const chunk of chunks) {
+          if (typeof chunk === 'string') {
+            resultText += chunk
+          } else if (chunk instanceof Uint8Array || chunk.buffer) {
+            resultText += new TextDecoder().decode(chunk)
+          } else {
+            resultText += chunk.toString()
+          }
+        }
+        send(true, resultText)
+      })
+
+      data.on('error', (error: Error) => {
+        send(false, error.message)
       })
     } catch (e) {
       send(false, e.message)
