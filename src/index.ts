@@ -77,7 +77,12 @@ global.RDF = {
         sources: querySources,
       })
 
-      const { data } = await engine.resultToString(result, format(query))
+      const formatType = format(query)
+
+      const { data } = await engine.resultToString(
+        result,
+        formatType === 'table' ? 'application/json' : formatType,
+      )
 
       // Collect all data from the stream (browser-compatible)
       const chunks: any[] = []
@@ -97,7 +102,8 @@ global.RDF = {
             resultText += chunk.toString()
           }
         }
-        send(true, resultText)
+
+        send(true, formatType === 'table' ? JSON.parse(resultText) : resultText)
       })
 
       data.on('error', (error: Error) => {

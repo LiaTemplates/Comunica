@@ -16,11 +16,149 @@ comment:  A macro library for trying and playing with SPARQL and RDF that is
 
 script:   dist/index.js
 
+@onload
+window.htmlTable = function (rows, opts = {}) {
+  const {
+    columns,
+    caption,
+    includeIndex = true,
+    indexHeader = "i",
+    linkify = true,
+    urlRegex = /^(https?:\/\/|mailto:|ftp:\/\/)/i
+  } = opts;
+
+  const escapeHtml = (v) =>
+    String(v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const allColumns = (() => {
+    if (Array.isArray(columns) && columns.length) return columns.slice();
+    const set = new Set();
+    for (const r of rows || []) Object.keys(r || {}).forEach((k) => set.add(k));
+    return Array.from(set);
+  })();
+
+  const formatCell = (value) => {
+    if (value === null || value === undefined) return "";
+    const raw = typeof value === "string" ? value : JSON.stringify(value);
+
+    if (linkify && typeof raw === "string" && urlRegex.test(raw)) {
+      const href = escapeHtml(raw);
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer">${href}</a>`;
+    }
+
+    return escapeHtml(raw);
+  };
+
+  const ths = [
+    includeIndex ? `<th>${escapeHtml(indexHeader)}</th>` : "",
+    ...allColumns.map((c) => `<th>${escapeHtml(c)}</th>`)
+  ].join("");
+
+  const trs = (rows || []).map((r, i) => {
+    const tds = [
+      includeIndex ? `<td class="index">${i}</td>` : "",
+      ...allColumns.map((c) => `<td>${formatCell(r?.[c])}</td>`)
+    ].join("");
+    return `<tr>${tds}</tr>`;
+  }).join("");
+
+  const cap = caption ? `<caption>${escapeHtml(caption)}</caption>` : "";
+
+  return `
+<style>
+.html-console-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  background: #111;
+  color: #eee;
+  border: 1px solid #333;
+}
+
+/* Caption */
+.html-console-table caption {
+  caption-side: top;
+  text-align: left;
+  padding: 10px;
+  font-weight: bold;
+  color: #fff;
+}
+
+/* Header */
+.html-console-table thead {
+  background: #1b1b1b;
+}
+
+.html-console-table th {
+  padding: 8px 10px;
+  text-align: left;
+  border: 1px solid #333;   /* vertical + horizontal lines */
+  color: #9cdcfe;
+  font-weight: 600;
+}
+
+/* Body cells */
+.html-console-table td {
+  padding: 8px 10px;
+  border: 1px solid #2a2a2a;  /* full grid */
+  vertical-align: top;
+  word-break: break-all;
+}
+
+/* Zebra rows */
+.html-console-table tbody tr:nth-child(even) {
+  background: #161616;
+}
+
+/* Hover */
+.html-console-table tbody tr:hover {
+  background: #222;
+}
+
+/* Index column */
+.html-console-table .index {
+  color: #888;
+}
+
+/* Links */
+.html-console-table a {
+  color: #4fc1ff;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.html-console-table a:hover {
+  text-decoration: underline;
+  color: #82e0ff;
+}
+</style>
+
+<table class="html-console-table">
+  ${cap}
+  <thead><tr>${ths}</tr></thead>
+  <tbody>${trs}</tbody>
+</table>
+`.trim();
+}
+@end
+
 @Comunica.SPARQL
 <script>
   function output(ok, message) {
-    if (ok) send.lia(message)
-    else {
+    if (ok) {
+      if (typeof message === 'string')
+        send.lia(message)
+      else {
+        console.html(htmlTable(message))
+        send.lia("LIA: stop")
+      }
+    } else {
       let errMessage = []
       let err = message.match(/Parse error on line (\d+)[^\n]\n((?:.|\n)+)/)
 
@@ -46,8 +184,14 @@ script:   dist/index.js
 @Comunica.RDF_SPARQL
 <script>
   function output(ok, message) {
-    if (ok) send.lia(message)
-    else {
+     if (ok) {
+      if (typeof message === 'string')
+        send.lia(message)
+      else {
+        console.html(htmlTable(message))
+        send.lia("LIA: stop")
+      }
+    } else {
       let errMessage = []
       let err = message.match(/Parse error on line (\d+)[^\n]\n((?:.|\n)+)/)
 
