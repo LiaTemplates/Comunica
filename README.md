@@ -12,11 +12,11 @@ language: en
 narrator: US English Female
 
 comment:  A macro library for trying and playing with SPARQL and RDF that is
-          based on Communica v5.
+          based on Comunica v5.
 
 script:   dist/index.js
 
-@Communica.SPARQL
+@Comunica.SPARQL
 <script>
   function output(ok, message) {
     if (ok) send.lia(message)
@@ -43,7 +43,7 @@ script:   dist/index.js
 </script>
 @end
 
-@Communica.RDF_SPARQL
+@Comunica.RDF_SPARQL
 <script>
   function output(ok, message) {
     if (ok) send.lia(message)
@@ -74,7 +74,7 @@ script:   dist/index.js
 
 -->
 
-# Communica - Template
+# Comunica - Template
 
                           --{{0}}--
 This document defines some basic [LiaScript](https://LiaScript.github.io)-macros
@@ -82,18 +82,18 @@ for dealing and experimenting with the semantic web-technologies, such as
 querying [SPARQL](https://en.wikipedia.org/wiki/SPARQL) and or dealing with
 [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) in the form
 of [turtle](https://en.wikipedia.org/wiki/Turtle_%28syntax%29). Others are about
-to come. This template is mainly based on [Communica](https://comunica.dev) an
+to come. This template is mainly based on [Comunica](https://comunica.dev) an
 open-source knowledge graph querying framework. I hope in the future, there will
 be more functions available. At the moment it is possible to execute and edit
 code-blocks with SPARQL queries.
 
 __Try it on LiaScript:__
 
-https://liascript.github.io/course/?https://raw.githubusercontent.com/liaTemplates/Communica/main/README.md
+https://liascript.github.io/course/?https://raw.githubusercontent.com/liaTemplates/Comunica/main/README.md
 
 __See the project on Github:__
 
-https://github.com/liaTemplates/Communica
+https://github.com/liaTemplates/Comunica
 
                          --{{1}}--
 There are three ways to use this template. The easiest way is to use the
@@ -144,7 +144,7 @@ SELECT ?s ?p ?o WHERE {
   ?s ?p ?o
 } LIMIT 100
 ```
-@Communica.SPARQL
+@Comunica.SPARQL
 ````
 
 
@@ -154,14 +154,14 @@ SELECT ?s ?p ?o WHERE {
 Currently you can use two macros, which can also be tweaked a bit. We will
 describe them both within this section.
 
-1. `@Communica.SPARQL`
-2. `@Communica.RDF_SPARQL`
+1. `@Comunica.SPARQL`
+2. `@Comunica.RDF_SPARQL`
 
 
-### `@Communica.SPARQL`
+### `@Comunica.SPARQL`
 
                           --{{0}}--
-Add the macro `@Communica.SPARQL` to the end of your
+Add the macro `@Comunica.SPARQL` to the end of your
 [SPARQL](https://en.wikipedia.org/wiki/SPARQL) query to make it executable and
 editable. You can add as much blocks as you want to.
 
@@ -174,7 +174,7 @@ SELECT ?s ?p ?o WHERE {
   ?s ?p ?o
 } LIMIT 10
 ```
-@Communica.SPARQL
+@Comunica.SPARQL
 ````
 
                           --{{1}}--
@@ -190,7 +190,7 @@ SELECT ?s ?p ?o WHERE {
   ?s ?p ?o
 } LIMIT 10
 ```
-@Communica.SPARQL
+@Comunica.SPARQL
 
 
                           --{{2}}--
@@ -205,7 +205,7 @@ SELECT ?s ?p ?o WHERE {
   ?s ?p ?o
 } LIMIT 10
 ```
-@Communica.SPARQL
+@Comunica.SPARQL
 
 #### Sources
 
@@ -224,7 +224,7 @@ SELECT ?s ?p ?o WHERE {
 ?s ?p ?o
 } LIMIT 100
 ```
-@Communica.SPARQL
+@Comunica.SPARQL
 
 
 #### Formats
@@ -242,7 +242,7 @@ SELECT ?s ?p ?o WHERE {
 ?s ?p ?o
 } LIMIT 5
 ```
-@Communica.SPARQL
+@Comunica.SPARQL
 
                           --{{1}}--
 The default format is currently `table`, however, you can overwrite this by one
@@ -271,7 +271,7 @@ table.
 | `application/ld+json`             |    ❌     | The [JSON-LD](https://json-ld.org) RDF serialization.                            |
 
 
-### `@Communica.RDF_SPARQL`
+### `@Comunica.RDF_SPARQL`
 
                           --{{0}}--
 It is possible also to define your own files and to query them, by combining two
@@ -301,7 +301,7 @@ SELECT * {
   ?s ?p ?o
 } LIMIT 5
 ```
-@Communica.RDF_SPARQL
+@Comunica.RDF_SPARQL
 ````
 
                           --{{1}}--
@@ -335,7 +335,7 @@ SELECT * {
   ?s ?p ?o
 } LIMIT 5
 ```
-@Communica.RDF_SPARQL
+@Comunica.RDF_SPARQL
 
 
                           --{{2}}--
@@ -352,7 +352,7 @@ global object `ẁindow.RDF`.
 ``` html
 script:   dist/index.js
 
-@Communica.SPARQL
+@Comunica.SPARQL
 <script>
   function output(ok, message) {
     if (ok) send.lia(message)
@@ -379,7 +379,7 @@ script:   dist/index.js
 </script>
 @end
 
-@Communica.RDF_SPARQL
+@Comunica.RDF_SPARQL
 <script>
   function output(ok, message) {
     if (ok) send.lia(message)
@@ -415,9 +415,9 @@ instructions:
 
                             {{1}}
 ``` bash
-$ git clone https://github.com/LiaTemplates/Communica
+$ git clone https://github.com/LiaTemplates/Comunica
 
-$ cd Communica
+$ cd Comunica
 
 $ git checkout dev
 
