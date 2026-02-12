@@ -210,6 +210,8 @@ window.htmlTable = function (rows, opts = {}) {
 
   window.RDF.parse.rdf(`@input`).then((e) => {
     window.RDF.query(`@input(1)`, output, [ e ] )
+  }).catch((error) => {
+    output(false, error.message || error.toString())
   })
 
   "LIA: wait"
@@ -546,6 +548,8 @@ script:   dist/index.js
 
   window.RDF.parse.rdf(`@input`).then((e) => {
     window.RDF.query(`@input(1)`, output, [ e ] )
+  }).catch((error) => {
+    output(false, error.message || error.toString())
   })
 
   "LIA: wait"
