@@ -3,7 +3,7 @@ author:   André Dietrich
 
 email:    LiaScript@web.de
 
-version:  0.0.4
+version:  0.0.5
 
 logo:     Screen-Shot-2012-09-28-at-20.27.12.png
 
@@ -11,185 +11,45 @@ language: en
 
 narrator: US English Female
 
-comment:  A macro library for trying and playing with SPARQL and RDF that is
-          based on Comunica v5.
+comment:  A macro library for trying and playing with SPARQL, RDF, reasoning and
+          SHACL, based on Comunica v5.
 
 script:   dist/index.js
 
-@onload
-window.htmlTable = function (rows, opts = {}) {
-  const {
-    columns,
-    caption,
-    includeIndex = true,
-    indexHeader = "i",
-    linkify = true,
-    urlRegex = /^(https?:\/\/|mailto:|ftp:\/\/)/i
-  } = opts;
-
-  const escapeHtml = (v) =>
-    String(v)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-
-  const allColumns = (() => {
-    if (Array.isArray(columns) && columns.length) return columns.slice();
-    const set = new Set();
-    for (const r of rows || []) Object.keys(r || {}).forEach((k) => set.add(k));
-    return Array.from(set);
-  })();
-
-  const formatCell = (value) => {
-    if (value === null || value === undefined) return "";
-    const raw = typeof value === "string" ? value : JSON.stringify(value);
-
-    if (linkify && typeof raw === "string" && urlRegex.test(raw)) {
-      const href = escapeHtml(raw);
-      return `<a href="${href}" target="_blank" rel="noopener noreferrer">${href}</a>`;
-    }
-
-    return escapeHtml(raw);
-  };
-
-  const ths = [
-    includeIndex ? `<th>${escapeHtml(indexHeader)}</th>` : "",
-    ...allColumns.map((c) => `<th>${escapeHtml(c)}</th>`)
-  ].join("");
-
-  const trs = (rows || []).map((r, i) => {
-    const tds = [
-      includeIndex ? `<td class="index">${i}</td>` : "",
-      ...allColumns.map((c) => `<td>${formatCell(r?.[c])}</td>`)
-    ].join("");
-    return `<tr>${tds}</tr>`;
-  }).join("");
-
-  const cap = caption ? `<caption>${escapeHtml(caption)}</caption>` : "";
-
-  return `
-<style>
-.html-console-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: Consolas, Monaco, monospace;
-  font-size: 13px;
-  background: #111;
-  color: #eee;
-  border: 1px solid #333;
-}
-
-/* Caption */
-.html-console-table caption {
-  caption-side: top;
-  text-align: left;
-  padding: 10px;
-  font-weight: bold;
-  color: #fff;
-}
-
-/* Header */
-.html-console-table thead {
-  background: #1b1b1b;
-}
-
-.html-console-table th {
-  padding: 8px 10px;
-  text-align: left;
-  border: 1px solid #333;   /* vertical + horizontal lines */
-  color: #9cdcfe;
-  font-weight: 600;
-}
-
-/* Body cells */
-.html-console-table td {
-  padding: 8px 10px;
-  border: 1px solid #2a2a2a;  /* full grid */
-  vertical-align: top;
-  word-break: break-all;
-}
-
-/* Zebra rows */
-.html-console-table tbody tr:nth-child(even) {
-  background: #161616;
-}
-
-/* Hover */
-.html-console-table tbody tr:hover {
-  background: #222;
-}
-
-/* Index column */
-.html-console-table .index {
-  color: #888;
-}
-
-/* Links */
-.html-console-table a {
-  color: #4fc1ff;
-  text-decoration: none;
-  word-break: break-all;
-}
-
-.html-console-table a:hover {
-  text-decoration: underline;
-  color: #82e0ff;
-}
-</style>
-
-<table class="html-console-table">
-  ${cap}
-  <thead><tr>${ths}</tr></thead>
-  <tbody>${trs}</tbody>
-</table>
-`.trim();
-}
-@end
-
 @Comunica.SPARQL
 <script>
-  function output(ok, message) {
-    if (!ok) send.lia(message, [], false)
-    else if (typeof message === 'string') send.lia(message)
-    else {
-      console.html(htmlTable(message))
-      send.lia("LIA: stop")
-    }
-  }
-
-  window.RDF.query(`@'input`, output, [])
-
+  window.RDF.query(send, console, `@'input`)
   "LIA: wait"
 </script>
 @end
 
 @Comunica.RDF_SPARQL
 <script>
-  function output(ok, message) {
-    if (!ok) send.lia(message, [], false)
-    else if (typeof message === 'string') send.lia(message)
-    else {
-      console.html(htmlTable(message))
-      send.lia("LIA: stop")
-    }
-  }
+  window.RDF.query(send, console, `@'input(1)`, `@'input(0)`)
+  "LIA: wait"
+</script>
+@end
 
-  window.RDF.parse.rdf(`@'input(0)`).then((store) => {
-    window.RDF.query(`@'input(1)`, output, [store])
-  }).catch((error) => {
-    const message = error.message || error.toString()
-    const line = message.match(/on line (\d+)/)
-    // mark the line in the first (Turtle) editor
-    send.lia(message, line ? [[{
-      row: parseInt(line[1]) - 1,
-      column: 1,
-      text: message,
-      type: "error"
-    }], []] : [], false)
-  })
+@Comunica.RDF
+<script>
+  window.RDF.convert(send, console, `@'input`, "@0")
+  "LIA: wait"
+</script>
+@end
 
+@Comunica.SHACL
+<script>
+  window.RDF.shacl(send, console, `@'input(0)`, `@'input(1)`)
+  "LIA: wait"
+</script>
+@end
+
+@Comunica.GRAPH
+<script run-once modify="false" style="display:block">
+  // runs on page load, maybe before dist/index.js is ready
+  (function draw() {
+    window.RDF ? window.RDF.draw(send, `@'0`) : setTimeout(draw, 100)
+  })()
   "LIA: wait"
 </script>
 @end
@@ -203,11 +63,11 @@ This document defines some basic [LiaScript](https://LiaScript.github.io)-macros
 for dealing and experimenting with the semantic web-technologies, such as
 querying [SPARQL](https://en.wikipedia.org/wiki/SPARQL) and or dealing with
 [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) in the form
-of [turtle](https://en.wikipedia.org/wiki/Turtle_%28syntax%29). Others are about
-to come. This template is mainly based on [Comunica](https://comunica.dev) an
-open-source knowledge graph querying framework. I hope in the future, there will
-be more functions available. At the moment it is possible to execute and edit
-code-blocks with SPARQL queries.
+of [turtle](https://en.wikipedia.org/wiki/Turtle_%28syntax%29), JSON-LD or RDF/XML.
+This template is mainly based on [Comunica](https://comunica.dev) an
+open-source knowledge graph querying framework. You can execute and edit
+SPARQL queries, convert and draw RDF data, use RDFS and OWL reasoning and
+validate data with SHACL.
 
 __Try it on LiaScript:__
 
@@ -228,7 +88,7 @@ and change it, as you wish.
                            {{1}}
 1. Load the macros via
 
-   `import: https://raw.githubusercontent.com/LiaTemplates/Comunica/0.0.4/README.md`
+   `import: https://raw.githubusercontent.com/LiaTemplates/Comunica/0.0.5/README.md`
 
 2. Copy the definitions into your Project
 
@@ -243,7 +103,7 @@ much, simply add the following comment to the head of your Markdown document.
 
 ``` markdown
 <!--
-import: https://raw.githubusercontent.com/LiaTemplates/Comunica/0.0.4/README.md
+import: https://raw.githubusercontent.com/LiaTemplates/Comunica/0.0.5/README.md
 -->
 
 # Title
@@ -273,11 +133,14 @@ SELECT ?s ?p ?o WHERE {
 ## Macros
 
                           --{{0}}--
-Currently you can use two macros, which can also be tweaked a bit. We will
-describe them both within this section.
+Currently you can use five macros, which can also be tweaked a bit. We will
+describe them all within this section.
 
 1. `@Comunica.SPARQL`
 2. `@Comunica.RDF_SPARQL`
+3. `@Comunica.RDF`
+4. `@Comunica.GRAPH`
+5. `@Comunica.SHACL`
 
 
 ### `@Comunica.SPARQL`
@@ -400,6 +263,7 @@ serializations (TriG, Turtle, JSON-LD, …) only work for `CONSTRUCT` and
 | `stats`                           |    ❌     | A custom results format for testing and debugging.                               |
 | `table`                           |    ✅     | An HTML table, the default of this template.                                     |
 | `tree`                            |    ✅     | A tree-based result format for GraphQL-LD result compacting.                     |
+| `graph`                           |    ✅     | An interactive graph of the result, only for `CONSTRUCT` and `DESCRIBE`.          |
 | `application/trig`                |    ✅     | The [TriG](https://www.w3.org/TR/trig) RDF serialization.                        |
 | `application/n-quads`             |    ✅     | The [N-Quads](https://www.w3.org/TR/n-quads) RDF serialization.                  |
 | `text/turtle`                     |    ✅     | The [Turtle](https://www.w3.org/TR/turtle) RDF serialization.                    |
@@ -497,14 +361,173 @@ INSERT DATA { :Bello a :Dog }
 ```
 @Comunica.RDF_SPARQL
 
+#### Reasoning
+
+                          --{{0}}--
+Add `# reasoning: rdfs` to the query or to the data and all triples that follow
+from the RDFS rules are added before the query runs: `rdfs:subClassOf`,
+`rdfs:subPropertyOf`, `rdfs:domain` and `rdfs:range`. With `# reasoning: owl`
+you additionally get a small part of OWL: `owl:inverseOf`, `owl:sameAs`,
+`owl:equivalentClass`, `owl:equivalentProperty`, `owl:SymmetricProperty` and
+`owl:TransitiveProperty`. Remove the comment and compare the results.
+
+``` turtle       Turtle
+@prefix :     <http://www.example.org/sample.rdfs#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+:Dog      rdfs:subClassOf :Animal .
+:Person   rdfs:subClassOf :Animal .
+:hasSon   rdfs:subPropertyOf :hasChild ;
+          owl:inverseOf :hasParent .
+:hasChild rdfs:range :Person .
+
+:Max      a :Dog .
+:Adam     :hasSon :Abel .
+```
+``` sparql      +SPARQL-Query
+# reasoning: owl
+PREFIX : <http://www.example.org/sample.rdfs#>
+
+SELECT ?animal ?parent {
+  ?animal a :Animal .
+  OPTIONAL { ?animal :hasParent ?parent }
+}
+```
+@Comunica.RDF_SPARQL
+
+### `@Comunica.RDF`
+
+                          --{{0}}--
+Attach `@Comunica.RDF` to a single code-block with RDF data to check it and to
+see it in another format. The data can be written in Turtle, TriG, N-Triples,
+N-Quads, JSON-LD or RDF/XML, the format is detected automatically. Without a
+parameter the triples are shown as a table.
+
+``` turtle
+@prefix : <http://www.example.org/sample.rdfs#> .
+
+:Max a :Dog ;
+     :name "Max" ;
+     :knows :Bello .
+```
+@Comunica.RDF
+
+                          --{{1}}--
+Put the output format in brackets: `text/turtle`, `application/trig`,
+`application/n-triples`, `application/n-quads`, `text/n3`,
+`application/ld+json`, `table` or `graph`.
+
+                            {{1}}
+``` json
+{
+  "@context": { "ex": "http://www.example.org/sample.rdfs#" },
+  "@id": "ex:Max",
+  "@type": "ex:Dog",
+  "ex:name": "Max",
+  "ex:knows": { "@id": "ex:Bello" }
+}
+```
+@Comunica.RDF(text/turtle)
+
+#### Graph
+
+                          --{{0}}--
+`graph` draws the data, you can move the nodes around and zoom in. Literals
+are yellow boxes, blank nodes are small grey dots. The same works for `CONSTRUCT` queries
+with `# format: graph`. A `# reasoning:` comment also works here.
+
+``` turtle
+@prefix :     <http://www.example.org/sample.rdfs#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+# reasoning: rdfs
+
+:Dog  rdfs:subClassOf :Animal .
+:Max  a :Dog ;
+      :name "Max" ;
+      :knows [ :name "Bello" ] .
+```
+@Comunica.RDF(graph)
+
+### `@Comunica.GRAPH`
+
+                          --{{0}}--
+If you only want to show the graph, put `@Comunica.GRAPH` directly behind the
+backticks. The code-block is replaced by the drawing, there is no editor. All
+input formats and `# reasoning:` work as before.
+
+```` markdown
+``` turtle @Comunica.GRAPH
+@prefix :     <http://www.example.org/sample.rdfs#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+# reasoning: rdfs
+
+:Dog  rdfs:subClassOf :Animal .
+:Max  a :Dog ;
+      :name "Max" ;
+      :knows [ :name "Bello" ] .
+```
+````
+
+                          --{{1}}--
+This is the result:
+
+                            {{1}}
+``` turtle @Comunica.GRAPH
+@prefix :     <http://www.example.org/sample.rdfs#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+# reasoning: rdfs
+
+:Dog  rdfs:subClassOf :Animal .
+:Max  a :Dog ;
+      :name "Max" ;
+      :knows [ :name "Bello" ] .
+```
+
+### `@Comunica.SHACL`
+
+                          --{{0}}--
+[SHACL](https://www.w3.org/TR/shacl/) checks whether data matches a set of
+shapes. The first code-block contains the data, the second one the shapes. If
+everything is fine, the result is `conforms: true`, otherwise you get a table
+with all violations.
+
+``` turtle       Data
+@prefix :    <http://www.example.org/sample.rdfs#> .
+
+:Max   a :Dog ; :name "Max" ; :age "three" .
+:Bello a :Dog .
+```
+``` turtle       +Shapes
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix :    <http://www.example.org/sample.rdfs#> .
+
+:DogShape a sh:NodeShape ;
+  sh:targetClass :Dog ;
+  sh:property [
+    sh:path     :name ;
+    sh:minCount 1 ;
+    sh:message  "Every dog needs a name"
+  ] ;
+  sh:property [
+    sh:path     :age ;
+    sh:datatype xsd:integer
+  ] .
+```
+@Comunica.SHACL
+
+                          --{{1}}--
+The SHACL core constraints are supported, SPARQL-based constraints are not.
+
 ## Implementation
 
                           --{{0}}--
 All the functionality is defined within the main-comment at the top of
 [this document](https://github.com/LiaTemplates/Comunica/blob/main/README.md?plain=1).
 It makes use of the typescript-functions defined in `src/index.ts`, which defines
-a global object `window.RDF`. Copy the `script` line, the `@onload` block and both
-macros into the header of your course.
+a global object `window.RDF` (the logic lives in `src/rdf.ts`). Copy the `script`
+line and the macros into the header of your course.
 
                           --{{1}}--
 If you want to build this project by your own, then follow the following
@@ -521,4 +544,6 @@ $ git checkout dev
 $ npm i
 
 $ npm run build
+
+$ npm test
 ```
