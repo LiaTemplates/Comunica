@@ -3,9 +3,9 @@ author:   André Dietrich
 
 email:    LiaScript@web.de
 
-version:  0.0.3
+version:  0.0.4
 
-logo:     https://semanticweb.cs.vu.nl/R/sparql_hollywood/sparql_hollywood_files/Screen-Shot-2012-09-28-at-20.27.12.png
+logo:     Screen-Shot-2012-09-28-at-20.27.12.png
 
 language: en
 
@@ -151,31 +151,15 @@ window.htmlTable = function (rows, opts = {}) {
 @Comunica.SPARQL
 <script>
   function output(ok, message) {
-    if (ok) {
-      if (typeof message === 'string')
-        send.lia(message)
-      else {
-        console.html(htmlTable(message))
-        send.lia("LIA: stop")
-      }
-    } else {
-      let errMessage = []
-      let err = message.match(/Parse error on line (\d+)[^\n]\n((?:.|\n)+)/)
-
-      if (err && err.length >= 3) {
-        errMessage = [[{
-          row : parseInt(err[1]) - 1,
-          column : 1,
-          text : err[2],
-          type : "error"
-        }]]
-      }
-
-      send.lia(message, errMessage, false)
+    if (!ok) send.lia(message, [], false)
+    else if (typeof message === 'string') send.lia(message)
+    else {
+      console.html(htmlTable(message))
+      send.lia("LIA: stop")
     }
   }
 
-  window.RDF.query(`@input`, output, [] )
+  window.RDF.query(`@'input`, output, [])
 
   "LIA: wait"
 </script>
@@ -184,34 +168,26 @@ window.htmlTable = function (rows, opts = {}) {
 @Comunica.RDF_SPARQL
 <script>
   function output(ok, message) {
-     if (ok) {
-      if (typeof message === 'string')
-        send.lia(message)
-      else {
-        console.html(htmlTable(message))
-        send.lia("LIA: stop")
-      }
-    } else {
-      let errMessage = []
-      let err = message.match(/Parse error on line (\d+)[^\n]\n((?:.|\n)+)/)
-
-      if (err && err.length >= 3) {
-        errMessage = [[], [{
-          row : parseInt(err[1]) - 1,
-          column : 1,
-          text : err[2],
-          type : "error"
-        }]]
-      }
-
-      send.lia(message, errMessage, false)
+    if (!ok) send.lia(message, [], false)
+    else if (typeof message === 'string') send.lia(message)
+    else {
+      console.html(htmlTable(message))
+      send.lia("LIA: stop")
     }
   }
 
-  window.RDF.parse.rdf(`@input`).then((e) => {
-    window.RDF.query(`@input(1)`, output, [ e ] )
+  window.RDF.parse.rdf(`@'input(0)`).then((store) => {
+    window.RDF.query(`@'input(1)`, output, [store])
   }).catch((error) => {
-    output(false, error.message || error.toString())
+    const message = error.message || error.toString()
+    const line = message.match(/on line (\d+)/)
+    // mark the line in the first (Turtle) editor
+    send.lia(message, line ? [[{
+      row: parseInt(line[1]) - 1,
+      column: 1,
+      text: message,
+      type: "error"
+    }], []] : [], false)
   })
 
   "LIA: wait"
@@ -244,7 +220,7 @@ https://github.com/liaTemplates/Comunica
                          --{{1}}--
 There are three ways to use this template. The easiest way is to use the
 `import` statement and the url of the raw text-file of the master branch or any
-other branch or version. But you can also copy the required functionionality
+other branch or version. But you can also copy the required functionality
 directly into the header of your Markdown document, see therefor the
 [last slide](#implementation). And of course, you could also clone this project
 and change it, as you wish.
@@ -252,7 +228,7 @@ and change it, as you wish.
                            {{1}}
 1. Load the macros via
 
-   `import: https://raw.githubusercontent.com/LiaTemplates/Comunica/0.0.3/README.md`
+   `import: https://raw.githubusercontent.com/LiaTemplates/Comunica/0.0.4/README.md`
 
 2. Copy the definitions into your Project
 
@@ -267,7 +243,7 @@ much, simply add the following comment to the head of your Markdown document.
 
 ``` markdown
 <!--
-import: https://raw.githubusercontent.com/LiaTemplates/Comunica/0.0.3/README.md
+import: https://raw.githubusercontent.com/LiaTemplates/Comunica/0.0.4/README.md
 -->
 
 # Title
@@ -359,7 +335,7 @@ SELECT ?s ?p ?o WHERE {
 As you have seen earlier, it is possible by you and by your user to define the
 sources for your query. Simply add one or multiple comments of the following
 form into your code-block. If you use a one-liner, your sources have to be
-separated by one space.
+separated by spaces.
 
 ``` sparql
 # source: https://fragments.dbpedia.org/2015/en
@@ -369,6 +345,21 @@ SELECT ?s ?p ?o WHERE {
 ?s ?p <http://dbpedia.org/resource/Belgium>.
 ?s ?p ?o
 } LIMIT 100
+```
+@Comunica.SPARQL
+
+                          --{{1}}--
+Comunica guesses the type of a source. If it guesses wrong, put the type in
+front of the URL, like `sparql@` for a SPARQL endpoint. All types are listed in
+the [Comunica documentation](https://comunica.dev/docs/query/advanced/source_types/).
+
+                            {{1}}
+``` sparql
+# source: sparql@https://query.wikidata.org/sparql
+
+SELECT ?cat WHERE {
+  ?cat <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q146>
+} LIMIT 5
 ```
 @Comunica.SPARQL
 
@@ -393,9 +384,9 @@ SELECT ?s ?p ?o WHERE {
                           --{{1}}--
 The default format is currently `table`, however, you can overwrite this by one
 of the following media types. All possible formats are defined
-[here](https://comunica.dev/docs/query/advanced/result_formats/). However,
-currently it only possible to use a subset of them, which are highlighted in the
-table.
+[here](https://comunica.dev/docs/query/advanced/result_formats/). The RDF
+serializations (TriG, Turtle, JSON-LD, …) only work for `CONSTRUCT` and
+`DESCRIBE` queries, the results formats only for `SELECT` and `ASK`.
 
                             {{1}}
 | Media type                        | Supported | Description                                                                      |
@@ -403,18 +394,18 @@ table.
 | `application/json`                |    ✅     | A custom, simplified JSON result format.                                         |
 | `simple`                          |    ✅     | A custom, text-based result format.                                              |
 | `application/sparql-results+json` |    ✅     | The [SPARQL/JSON](https://www.w3.org/TR/sparql11-results-json) results format.   |
-| `application/sparql-results+xml`  |    ❌     | The [SPARQL/XML](https://www.w3.org/TR/rdf-sparql-XMLres) results format.        |
+| `application/sparql-results+xml`  |    ✅     | The [SPARQL/XML](https://www.w3.org/TR/rdf-sparql-XMLres) results format.        |
 | `text/csv`                        |    ✅     | The [SPARQL/CSV](https://www.w3.org/TR/sparql11-results-csv-tsv) results format. |
 | `text/tab-separated-values`       |    ✅     | The [SPARQL/TSV](https://www.w3.org/TR/sparql11-results-csv-tsv) results format. |
 | `stats`                           |    ❌     | A custom results format for testing and debugging.                               |
-| `table`                           |    ✅     | A text-based visual table result format.                                         |
-| `tree`                            |    ❌     | A tree-based result format for GraphQL-LD result compacting.                     |
-| `application/trig`                |    ❌     | The [TriG](https://www.w3.org/TR/trig) RDF serialization.                        |
-| `application/n-quads`             |    ❌     | The [N-Quads](https://www.w3.org/TR/n-quads) RDF serialization.                  |
-| `text/turtle`                     |    ❌     | The [Turtle](https://www.w3.org/TR/turtle) RDF serialization.                    |
-| `application/n-triples`           |    ❌     | The [N-Triples](https://www.w3.org/TR/n-triples) RDF serialization.              |
-| `text/n3`                         |    ❌     | The [Notation3](https://www.w3.org/TeamSubmission/n3) serialization.             |
-| `application/ld+json`             |    ❌     | The [JSON-LD](https://json-ld.org) RDF serialization.                            |
+| `table`                           |    ✅     | An HTML table, the default of this template.                                     |
+| `tree`                            |    ✅     | A tree-based result format for GraphQL-LD result compacting.                     |
+| `application/trig`                |    ✅     | The [TriG](https://www.w3.org/TR/trig) RDF serialization.                        |
+| `application/n-quads`             |    ✅     | The [N-Quads](https://www.w3.org/TR/n-quads) RDF serialization.                  |
+| `text/turtle`                     |    ✅     | The [Turtle](https://www.w3.org/TR/turtle) RDF serialization.                    |
+| `application/n-triples`           |    ✅     | The [N-Triples](https://www.w3.org/TR/n-triples) RDF serialization.              |
+| `text/n3`                         |    ✅     | The [Notation3](https://www.w3.org/TeamSubmission/n3) serialization.             |
+| `application/ld+json`             |    ✅     | The [JSON-LD](https://json-ld.org) RDF serialization.                            |
 
 
 ### `@Comunica.RDF_SPARQL`
@@ -452,7 +443,7 @@ SELECT * {
 
                           --{{1}}--
 The text behind the language definition is used as a title for your code-block,
-whereby a starting `+` or `-` define, wheather the editor view should be opened
+whereby a starting `+` or `-` define, whether the editor view should be opened
 or closed.
 
                             {{1}}
@@ -488,74 +479,32 @@ SELECT * {
 It is still possible to add different sources or to change the output format, as
 described before.
 
+#### SPARQL Update
+
+                          --{{0}}--
+`INSERT` and `DELETE` change the data of the first code-block. The result shows
+all triples after the update. Every run starts again from the original data.
+
+``` turtle       Turtle
+@prefix : <http://www.example.org/sample.rdfs#> .
+
+:Max a :Dog .
+```
+``` sparql      +SPARQL-Update
+PREFIX : <http://www.example.org/sample.rdfs#>
+
+INSERT DATA { :Bello a :Dog }
+```
+@Comunica.RDF_SPARQL
+
 ## Implementation
 
                           --{{0}}--
-All the functionionality is defined within the main-comment of this document. It
-makes use of the typescript-functions defined in `src/index.ts`, which defines a
-global object `ẁindow.RDF`.
-
-``` html
-script:   dist/index.js
-
-@Comunica.SPARQL
-<script>
-  function output(ok, message) {
-    if (ok) send.lia(message)
-    else {
-      let errMessage = []
-      let err = message.match(/Parse error on line (\d+)[^\n]\n((?:.|\n)+)/)
-
-      if (err && err.length >= 3) {
-        errMessage = [[{
-          row : parseInt(err[1]) - 1,
-          column : 1,
-          text : err[2],
-          type : "error"
-        }]]
-      }
-
-      send.lia(message, errMessage, false)
-    }
-  }
-
-  window.RDF.query(`@input`, output, [] )
-
-  "LIA: wait"
-</script>
-@end
-
-@Comunica.RDF_SPARQL
-<script>
-  function output(ok, message) {
-    if (ok) send.lia(message)
-    else {
-      let errMessage = []
-      let err = message.match(/Parse error on line (\d+)[^\n]\n((?:.|\n)+)/)
-
-      if (err && err.length >= 3) {
-        errMessage = [[], [{
-          row : parseInt(err[1]) - 1,
-          column : 1,
-          text : err[2],
-          type : "error"
-        }]]
-      }
-
-      send.lia(message, errMessage, false)
-    }
-  }
-
-  window.RDF.parse.rdf(`@input`).then((e) => {
-    window.RDF.query(`@input(1)`, output, [ e ] )
-  }).catch((error) => {
-    output(false, error.message || error.toString())
-  })
-
-  "LIA: wait"
-</script>
-@end
-```
+All the functionality is defined within the main-comment at the top of
+[this document](https://github.com/LiaTemplates/Comunica/blob/main/README.md?plain=1).
+It makes use of the typescript-functions defined in `src/index.ts`, which defines
+a global object `window.RDF`. Copy the `script` line, the `@onload` block and both
+macros into the header of your course.
 
                           --{{1}}--
 If you want to build this project by your own, then follow the following

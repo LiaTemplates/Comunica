@@ -1,16 +1,9 @@
 import { QueryEngine as SparqlEngine } from '@comunica/query-sparql'
 import { QueryEngine as RdfjsEngine } from '@comunica/query-sparql-rdfjs'
-import { Store as N3Store, DataFactory, Parser as N3Parser } from 'n3'
+import { Store as N3Store, Parser as N3Parser, Writer as N3Writer } from 'n3'
 
 function format(query: string) {
-  let result = 'table'
-  try {
-    result = [...query.matchAll(/#\s*format:\s*(\S+)/g)][0][1]
-  } catch (e) {
-    console.warn('SPARQL', e)
-  }
-
-  return result
+  return query.match(/#\s*format:\s*(\S+)/)?.[1] || 'table'
 }
 
 function sources(query) {
@@ -20,7 +13,16 @@ function sources(query) {
     const matches = query.matchAll(/#\s*sources?:\s*([^\n]+)/g)
 
     for (const match of matches) {
-      result.push(match[1].split(' ').map((s) => s.trim()))
+      // `sparql@https://…` is Comunica's notation for a typed source
+      result.push(
+        match[1]
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((s) => {
+            const typed = s.match(/^(\w+)@(https?:\/\/.+)$/)
+            return typed ? { type: typed[1], value: typed[2] } : s
+          }),
+      )
     }
   } catch (e) {
     console.warn('SPARQL', e)
@@ -77,6 +79,18 @@ global.RDF = {
         sources: querySources,
       })
 
+      // SPARQL Update: nothing to serialize, so run it and show the changed data
+      if (result.resultType === 'void') {
+        await result.execute()
+        send(
+          true,
+          rdfJsStores.length
+            ? new N3Writer().quadsToString(rdfJsStores[0].getQuads())
+            : 'OK',
+        )
+        return
+      }
+
       const formatType = format(query)
 
       const { data } = await engine.resultToString(
@@ -103,7 +117,11 @@ global.RDF = {
           }
         }
 
-        send(true, formatType === 'table' ? JSON.parse(resultText) : resultText)
+        if (formatType !== 'table') return send(true, resultText)
+
+        // ASK returns a boolean, only bindings and quads become a table
+        const json = JSON.parse(resultText)
+        send(true, Array.isArray(json) ? json : String(json))
       })
 
       data.on('error', (error: Error) => {
